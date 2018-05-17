@@ -1,11 +1,11 @@
-import zipfile
 import json
-from html.parser import HTMLParser
-from urllib.request import urlopen
+import os
 import urllib
+import zipfile
+from html.parser import HTMLParser
 from pathlib import Path
 from shutil import copyfile
-import os
+from urllib.request import urlopen
 
 
 def error_callback(*_, **__):
@@ -76,6 +76,24 @@ def getVersion(projectID, fileID):
     return pT
 
 
+def mod_index(modlist, modid):
+    """
+    Find the first instance of the specified mod in the provided list.
+
+    Args:
+        modlist (:obj:`list` of :obj:`dict`): List of mods as defined by the FTB manifest
+        modid (str): Numeric string of the mod project ID to search for
+
+    Returns:
+        (int) Index of first match, if any. Returns `None` if no match.
+    """
+
+    for i in range(0, len(modlist)):
+        if modlist[i]['projectID'] == modid:
+            return i
+    return None
+
+
 if not (os.path.isdir('base/') and os.path.exists('base/base.zip')):
     print("'Please ensure the base pack is stored in \"base/base.zip\" before running.")
     exit(1)
@@ -102,37 +120,52 @@ with open('custom/custom.json', 'r') as jsonFileCustom:
 baseJson = json.loads(baseJsonString)
 customJson = json.loads(customJsonString)
 
-baseFileCount = len(baseJson['files'])
+baseModCount = len(baseJson['files'])
 
 print("BASE PACK: {} by {}".format(baseJson['name'], baseJson['author']))
 print("MINECRAFT {}".format(baseJson['minecraft']['version']))
 print("LOADERS:")
 for loader in baseJson['minecraft']['modLoaders']:
     print("  {}".format(loader['id']))
-print("MODS: {}".format(baseFileCount))
+print("MODS: {}".format(baseModCount))
 print('')
 print("Merging manifest customizations...")
 
-for customization in customJson['files']:
-    c = 0
-    m = baseFileCount
-    foundProject = False
-    while c < m:
-        if not foundProject:
-            if baseJson['files'][c]['projectID'] == customization['projectID']:
-                baseJson['files'][c]['fileID'] = customization['fileID']
-                print("Updating to {}".format(
-                    getVersion(baseJson['files'][c]['projectID'], baseJson['files'][c]['fileID'])))
-                foundProject = True
-        c += 1
-    if not foundProject:
-        baseJson['files'].append(customization)
-        print("Added project {}".format(getName(customization['projectID'])))
+# Iterate over all file customizations in the manifest
+for mod in customJson['files']:
+    modID = mod['projectID']  # Absolutely required
+
+    if 'fileID' in mod:  # Only required to add or update
+        modVersion = mod['fileID']
+    else:
+        modVersion = None
+
+    if 'state' in mod:  # Assume present
+        modState = mod['state'].lower()
+    else:
+        modState = 'present'
+
+    modIndex = mod_index(baseJson['files'], modID)
+
+    if modIndex is not None:
+        if modState == 'present':
+            baseJson['files'][modIndex]['fileID'] = modVersion
+            print(
+                "Updating to {}".format(
+                    getVersion(baseJson['files'][modIndex]['projectID'], baseJson['files'][modIndex]['fileID'])))
+        else:  # if modState == 'absent'
+            baseJson['files'].remove(baseJson['files'][modIndex])
+            print("Removed {} from the manifest.".format(getName(modID)))
+    else:  # if modIndex is None
+        if modState == 'present':
+            baseJson['files'].append(mod)
+            print("Added project {}".format(getName(mod['projectID'])))
+        # else not found and not wanted, so do nothing
 
 copyfile('base/base.zip', 'final/modpack.zip')
 
 with zipfile.ZipFile('final/modpack.zip', 'a') as zFinal:
-    zFinal.writestr(json.dumps(baseJson), 'manifest.json')
+    zFinal.writestr('manifest.json', json.dumps(baseJson))
     pathList = Path('custom/overrides/').relative_to('custom/').glob('*')
     for path in pathList:
         pathString = str(path)

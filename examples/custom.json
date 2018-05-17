@@ -1,0 +1,24 @@
+{
+  "files": [
+    {
+      "name": "BDLib",
+      "state": "present",
+      "fileID": 2518031,
+      "projectID": 70496,
+      "required": true
+    },
+    {
+      "name": "UniDict",
+      "state": "present",
+      "fileID": 2557350,
+      "projectID": 244258,
+      "required": true
+    },
+    {
+      "name": "Inventory Sorter",
+      "state": "absent",
+      "comment": "Broken in DW20",
+      "projectID": 240633
+    }
+  ]
+}
