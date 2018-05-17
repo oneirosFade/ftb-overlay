@@ -1,0 +1,6 @@
+.idea
+base
+custom
+final
+venv
+*.pyc
