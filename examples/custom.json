@@ -89,6 +89,13 @@
       "projectID": 241319,
       "fileID": 2550326,
       "required": true
+    },
+    {
+      "name": "EnderCore",
+      "state": "present",
+      "projectID": 231868,
+      "fileID": 2555366,
+      "required": true
     }
   ]
 }
