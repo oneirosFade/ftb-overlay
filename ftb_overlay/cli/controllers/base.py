@@ -28,6 +28,9 @@ class ftboBaseController(ArgparseController):
             (['-o', '--output'],
              dict(help="Final ZIP to output", type=str, metavar='final_pack', dest='final_pack',
                   default='final/pack.zip')),
+            (['--noquery'],
+             dict(help="Do not query Curse to resolve IDs", action='store_true')),
+
         ]
 
     @expose(hide=True,
@@ -102,9 +105,18 @@ class ftboBaseController(ArgparseController):
         # Iterate over all file customizations in the manifest
         for mod in custom_json_str['files']:
             mod_project_id = mod['projectID']  # Absolutely required
+            if not self.app.pargs.noquery:
+                mod_project_name = getName(mod_project_id)
+            else:
+                mod_project_name = mod_project_id
 
             if 'fileID' in mod:  # Only required to add or update
                 mod_version = mod['fileID']
+                if not self.app.pargs.noquery:
+                    mod_file_name = getVersion(mod_project_id, mod_version)
+                else:
+                    mod_file_name = mod_version
+
             else:
                 mod_version = None
 
@@ -118,17 +130,14 @@ class ftboBaseController(ArgparseController):
             if mod_index is not None:
                 if mod_state == 'present':
                     base_json_str['files'][mod_index]['fileID'] = mod_version
-                    print(
-                        "Updating to {}".format(
-                            getVersion(base_json_str['files'][mod_index]['projectID'],
-                                       base_json_str['files'][mod_index]['fileID'])))
+                    print("Updating to {}".format(mod_file_name))
                 else:  # if mod_state == 'absent'
                     base_json_str['files'].remove(base_json_str['files'][mod_index])
-                    print("Removed {} from the manifest.".format(getName(mod_project_id)))
+                    print("Removed {} from the manifest.".format(mod_project_name))
             else:  # if mod_index is None
                 if mod_state == 'present':
                     base_json_str['files'].append(mod)
-                    print("Added project {}".format(getName(mod['projectID'])))
+                    print("Added project {}".format(mod_project_name))
                 # else not found and not wanted, so do nothing
 
         copyfile(base_pack, final_pack)
