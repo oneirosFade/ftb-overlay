@@ -1,6 +1,17 @@
-# FTB Modpack Customizing Tool
+FTB Modpack Customizing Tool
+============================
 
-## Instructions
+Installation
+------------
+
+```
+$ pip install -r requirements.txt
+
+$ python setup.py install
+```
+
+Instructions
+------------
 
 * Create the `base` directory and place your FTB pack there as `base.zip`
 * Create the `custom` directory and an FTB manifest file there named `custom.json`

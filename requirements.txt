@@ -1,2 +1,4 @@
+cement>=2.10.0
+
 urllib3
 beautifulsoup4
