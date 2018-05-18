@@ -13,10 +13,20 @@ $ python setup.py install
 Instructions
 ------------
 
-* Create the `base` directory and place your FTB pack there as `base.zip`
-* Create the `custom` directory and an FTB manifest file there named `custom.json`
-  * Note that the tool ignores all entries except the `files` array at present.
-* Any file overrides should be placed in `custom/overrides` the same as an FTB pack.
-* Create the `final` directory.
-* Run the tool.
-* The `final/modpack.zip` will now be your updated custom pack.
+Usage
+```
+ftb_overlay [-s SOURCE_PACK] [-p CUSTOM_BASEPATH] [-c CUSTOM_MANIFEST] [-o OUTPUT_PACK] [--noquery]
+```
+
+Example
+```
+ftb_overlay -s ./DW20.zip -o ./output/mypack.zip
+```
+
+Use `-h` for more explicit help. The `--noquery` option will prevent the tool from
+converting IDs to file/mod names with queries to Curse.
+
+By default, the tool uses `base/base.zip`, `custom/custom.json`, and `final/pack.zip`
+if no command-line options are passed.
+
+See the `examples` folder for example custom manifests.
