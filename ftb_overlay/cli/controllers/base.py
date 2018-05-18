@@ -2,13 +2,14 @@
 
 import json
 import os
+import tempfile
 import zipfile
 from pathlib import Path
 from shutil import copyfile
 
 from cement.ext.ext_argparse import ArgparseController, expose
 
-from ftb_overlay.helpers import mod_index, getName, getVersion
+from ftb_overlay.helpers import index_of_mod, getName, getVersion
 
 
 class ftboBaseController(ArgparseController):
@@ -16,101 +17,127 @@ class ftboBaseController(ArgparseController):
         label = 'base'
         description = 'FTB Modpack Customizing Tool'
         arguments = [
-            (['-f', '--foo'],
-             dict(help='the notorious foo option', dest='foo', action='store',
-                  metavar='TEXT')),
+            (['-s', '--source'],
+             dict(help="Source FTB pack", type=str, metavar='src_pack', dest='src_pack', default='base/base.zip')),
+            (['-p', '--custompath'],
+             dict(help="Custom overrides path", type=str, metavar='custom_path', dest='custom_path',
+                  default='custom/')),
+            (['-c', '--custom'],
+             dict(help="Custom manifest name", type=str, metavar='custom_manifest', dest='custom_manifest',
+                  default='custom.json')),
+            (['-o', '--output'],
+             dict(help="Final ZIP to output", type=str, metavar='final_pack', dest='final_pack',
+                  default='final/pack.zip')),
         ]
 
-    @expose(hide=True)
+    @expose(hide=True,
+            help="Merge custom overlay onto FTB modpack.")
     def default(self):
-        if not (os.path.isdir('base/') and os.path.exists('base/base.zip')):
-            print("'Please ensure the base pack is stored in \"base/base.zip\" before running.")
+        # Determine source pack. Default is 'base/base.zip' but may be overridden.
+        if self.app.pargs.src_pack is not None:
+            base_pack = self.app.pargs.src_pack
+        else:
+            base_pack = 'base/base.zip'
+        base_pack_path, base_pack_file = os.path.split(base_pack)
+        if not (os.path.isdir(base_pack_path) and os.path.exists(base_pack)):
+            print("The pack \"{}\" is not found.".format(base_pack))
             exit(1)
 
-        if not (os.path.isdir('custom/') and os.path.exists('custom/custom.json')):
-            print(
-                "Please ensure customizations are stored in \"custom/custom.json\" and \"custom/overrides\" before running.")
+        # Determine customizations path. Default is 'custom/' but may be overridden.
+        if self.app.pargs.custom_path is not None:
+            custom_path = self.app.pargs.custom_path
+        else:
+            custom_path = 'custom/'
+        if self.app.pargs.custom_manifest is not None:
+            custom_manifest = self.app.pargs.custom_manifest
+        else:
+            custom_manifest = 'custom.json'
+        custom_manifest_pathed = "{}{}".format(custom_path, custom_manifest)
+        if not (os.path.isdir(custom_path) and os.path.exists(custom_manifest_pathed)):
+            print("The custom manifest was not found at \"{}\".".format(custom_manifest_pathed))
             exit(1)
 
-        with zipfile.ZipFile('base/base.zip', 'r') as zBase:
-            listContents = zBase.namelist()
-            if 'manifest.json' not in listContents:
-                print("Error: base.zip is not a valid FTB mod pack ZIP.")
-                exit(1)
-            else:
-                print("Extracting base manifest.")
-                zBase.extract('manifest.json', 'base/')
+        # Determine final pack. Default is 'final/pack.zip' but may be overridden.
+        if self.app.pargs.final_pack is not None:
+            final_pack = self.app.pargs.final_pack
+        else:
+            final_pack = 'final/pack.zip'
+        final_pack_path, final_pack_file = os.path.split(final_pack)
+        if not os.path.isdir(final_pack_path):
+            print("The output path \"{}\" is not found.".format(final_pack_path))
+            exit(1)
 
-        with open('base/manifest.json', 'r') as jsonFileBase:
-            baseJsonString = jsonFileBase.read()
+        # Extract manifest from base pack.
+        with tempfile.TemporaryDirectory(prefix="ftbo_") as work_dir:
 
-        with open('custom/custom.json', 'r') as jsonFileCustom:
-            customJsonString = jsonFileCustom.read()
+            with zipfile.ZipFile(base_pack, 'r') as zBase:
+                base_contents = zBase.namelist()
+                if 'manifest.json' not in base_contents:
+                    print("Error: \"{}\" is not a valid FTB mod pack ZIP.".format(base_pack))
+                    exit(1)
+                else:
+                    print("Extracting base manifest.")
+                    zBase.extract('manifest.json', work_dir)
 
-        baseJson = json.loads(baseJsonString)
-        customJson = json.loads(customJsonString)
+            with open("{}/manifest.json".format(work_dir), 'r') as jsonFileBase:
+                base_pack_json = jsonFileBase.read()
 
-        baseModCount = len(baseJson['files'])
+        with open("{}/{}".format(custom_path, custom_manifest), 'r') as jsonFileCustom:
+            custom_json = jsonFileCustom.read()
 
-        print("BASE PACK: {} by {}".format(baseJson['name'], baseJson['author']))
-        print("MINECRAFT {}".format(baseJson['minecraft']['version']))
+        base_json_str = json.loads(base_pack_json)
+        custom_json_str = json.loads(custom_json)
+
+        base_mod_count = len(base_json_str['files'])
+
+        print("BASE PACK: {} by {}".format(base_json_str['name'], base_json_str['author']))
+        print("MINECRAFT {}".format(base_json_str['minecraft']['version']))
         print("LOADERS:")
-        for loader in baseJson['minecraft']['modLoaders']:
+        for loader in base_json_str['minecraft']['modLoaders']:
             print("  {}".format(loader['id']))
-        print("MODS: {}".format(baseModCount))
+        print("MODS: {}".format(base_mod_count))
         print('')
         print("Merging manifest customizations...")
 
         # Iterate over all file customizations in the manifest
-        for mod in customJson['files']:
-            modID = mod['projectID']  # Absolutely required
+        for mod in custom_json_str['files']:
+            mod_project_id = mod['projectID']  # Absolutely required
 
             if 'fileID' in mod:  # Only required to add or update
-                modVersion = mod['fileID']
+                mod_version = mod['fileID']
             else:
-                modVersion = None
+                mod_version = None
 
             if 'state' in mod:  # Assume present
-                modState = mod['state'].lower()
+                mod_state = mod['state'].lower()
             else:
-                modState = 'present'
+                mod_state = 'present'
 
-            modIndex = mod_index(baseJson['files'], modID)
+            mod_index = index_of_mod(base_json_str['files'], mod_project_id)
 
-            if modIndex is not None:
-                if modState == 'present':
-                    baseJson['files'][modIndex]['fileID'] = modVersion
+            if mod_index is not None:
+                if mod_state == 'present':
+                    base_json_str['files'][mod_index]['fileID'] = mod_version
                     print(
                         "Updating to {}".format(
-                            getVersion(baseJson['files'][modIndex]['projectID'],
-                                       baseJson['files'][modIndex]['fileID'])))
-                else:  # if modState == 'absent'
-                    baseJson['files'].remove(baseJson['files'][modIndex])
-                    print("Removed {} from the manifest.".format(getName(modID)))
-            else:  # if modIndex is None
-                if modState == 'present':
-                    baseJson['files'].append(mod)
+                            getVersion(base_json_str['files'][mod_index]['projectID'],
+                                       base_json_str['files'][mod_index]['fileID'])))
+                else:  # if mod_state == 'absent'
+                    base_json_str['files'].remove(base_json_str['files'][mod_index])
+                    print("Removed {} from the manifest.".format(getName(mod_project_id)))
+            else:  # if mod_index is None
+                if mod_state == 'present':
+                    base_json_str['files'].append(mod)
                     print("Added project {}".format(getName(mod['projectID'])))
                 # else not found and not wanted, so do nothing
 
-        copyfile('base/base.zip', 'final/modpack.zip')
+        copyfile(base_pack, final_pack)
 
-        with zipfile.ZipFile('final/modpack.zip', 'a') as zFinal:
-            zFinal.writestr('manifest.json', json.dumps(baseJson))
-            pathList = Path('custom/overrides/').relative_to('custom/').glob('*')
-            for path in pathList:
-                pathString = str(path)
-                zFinal.write(pathString)
+        with zipfile.ZipFile(final_pack, 'a') as zFinal:
+            zFinal.writestr('manifest.json', json.dumps(base_json_str))
+            override_list = Path("{}/overrides/".format(custom_path)).relative_to(custom_path).glob('*')
+            for override_file in override_list:
+                override_file_str = str(override_file)
+                zFinal.write(override_file_str)
 
-        print("Final mod pack stored as \"final/modpack.zip\"")
-
-        # If using an output handler such as 'mustache', you could also
-        # render a data dictionary using a template.  For example:
-        #
-        #   data = dict(foo='bar')
-        #   self.app.render(data, 'default.mustache')
-        #
-        #
-        # The 'default.mustache' file would be loaded from
-        # ``ftb_overlay.cli.templates``, or ``/var/lib/ftb_overlay/templates/``.
-        #
+        print("Final mod pack stored as \"{}\"".format(final_pack))

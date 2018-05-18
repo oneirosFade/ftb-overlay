@@ -17,7 +17,7 @@ def getVersion(projectID, fileID):
     return pT
 
 
-def mod_index(modlist, modid):
+def index_of_mod(modlist, modid):
     """
     Find the first instance of the specified mod in the provided list.
 
