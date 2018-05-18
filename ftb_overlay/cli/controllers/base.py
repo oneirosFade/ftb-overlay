@@ -1,5 +1,6 @@
 """ftb-overlay base controller."""
 
+import glob
 import json
 import os
 import tempfile
@@ -144,9 +145,12 @@ class ftboBaseController(ArgparseController):
 
         with zipfile.ZipFile(final_pack, 'a') as zFinal:
             zFinal.writestr('manifest.json', json.dumps(base_json_str))
-            override_list = Path("{}/overrides/".format(custom_path)).relative_to(custom_path).glob('*')
+            override_list = glob.glob("{}overrides/**".format(custom_path), recursive=True)
             for override_file in override_list:
-                override_file_str = str(override_file)
-                zFinal.write(override_file_str)
+                relative_file = Path(override_file).relative_to(custom_path)
+                print("Adding \"{}\" from overrides...".format(relative_file))
+                override_file_str = str(relative_file)
+
+                zFinal.write(override_file, override_file_str)
 
         print("Final mod pack stored as \"{}\"".format(final_pack))
