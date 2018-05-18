@@ -1,10 +1,65 @@
 {
   "files": [
     {
-      "name": "BDLib",
+      "name": "Inventory Sorter",
+      "state": "absent",
+      "comment": "Broken in DW20",
+      "projectID": 240633
+    },
+    {
+      "name": "Inventory Tweaks",
       "state": "present",
-      "fileID": 2518031,
-      "projectID": 70496,
+      "projectID": 223094,
+      "fileID": 2482481,
+      "required": true
+    },
+    {
+      "name": "Mekanism",
+      "state": "present",
+      "projectID": 268560,
+      "fileID": 2510812,
+      "required": true
+    },
+    {
+      "name": "EnderIO",
+      "state": "present",
+      "projectID": 64578,
+      "fileID": 2551553,
+      "required": true
+    },
+    {
+      "name": "OpenBlocks",
+      "state": "present",
+      "projectID": 228816,
+      "fileID": 2530225,
+      "required": true
+    },
+    {
+      "name": "OpenModsLib",
+      "state": "present",
+      "projectID": 228815,
+      "fileID": 2525230,
+      "required": true
+    },
+    {
+      "name": "Woot",
+      "state": "present",
+      "projectID": 244049,
+      "fileID": 2542390,
+      "required": true
+    },
+    {
+      "name": "Construct's Armory",
+      "state": "present",
+      "projectID": 287683,
+      "fileID": 2551274,
+      "required": true
+    },
+    {
+      "name": "AE2 Stuff",
+      "state": "present",
+      "projectID": 225194,
+      "fileID": 2491032,
       "required": true
     },
     {
@@ -15,10 +70,25 @@
       "required": true
     },
     {
-      "name": "Inventory Sorter",
-      "state": "absent",
-      "comment": "Broken in DW20",
-      "projectID": 240633
+      "name": "BDLib",
+      "state": "present",
+      "fileID": 2518031,
+      "projectID": 70496,
+      "required": true
+    },
+    {
+      "name": "GuideAPI",
+      "state": "present",
+      "projectID": 228832,
+      "fileID": 2544043,
+      "required": true
+    },
+    {
+      "name": "Reliquary",
+      "state": "present",
+      "projectID": 241319,
+      "fileID": 2550326,
+      "required": true
     }
   ]
 }
