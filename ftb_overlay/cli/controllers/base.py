@@ -6,7 +6,6 @@ import os
 import tempfile
 import zipfile
 from pathlib import Path
-from shutil import copyfile
 
 from cement.ext.ext_argparse import ArgparseController, expose
 
@@ -156,16 +155,31 @@ class ftboBaseController(ArgparseController):
                     print("Added project {}".format(mod_project_name))
                 # else not found and not wanted, so do nothing
 
-        copyfile(base_pack, final_pack)
+        # copyfile(base_pack, final_pack)
 
-        with zipfile.ZipFile(final_pack, 'a') as zFinal:
-            zFinal.writestr('manifest.json', json.dumps(base_json_str))
-            override_list = glob.glob("{}overrides/**".format(custom_path), recursive=True)
-            for override_file in override_list:
-                relative_file = Path(override_file).relative_to(custom_path)
-                print("Adding \"{}\" from overrides...".format(relative_file))
-                override_file_str = str(relative_file)
+        with zipfile.ZipFile(final_pack, 'w') as zFinal:
+            with zipfile.ZipFile(base_pack, 'r') as zBase:
 
-                zFinal.write(override_file, override_file_str)
+                # Write new objects to zip
+                zFinal.writestr('manifest.json', json.dumps(base_json_str))
+                override_list = glob.glob("{}overrides/**".format(custom_path), recursive=True)
+                for override_file in override_list:
+                    relative_file = Path(override_file).relative_to(custom_path)
+                    print("Adding \"{}\" from overrides...".format(relative_file))
+                    override_file_str = str(relative_file)
+
+                    zFinal.write(override_file, override_file_str)
+
+                # Write old objects if they don't collide
+                z_infolist = zFinal.infolist()
+                for base_item in zBase.infolist():
+                    print("DEBUG MATCHING: {}".format(base_item.filename))
+                    collision = False
+                    for check_item in z_infolist:
+                        if check_item.filename == base_item.filename:
+                            collision = True
+                    if not collision:
+                        zFinal.writestr(base_item, zBase.read(base_item.filename), zipfile.ZIP_DEFLATED)
+
 
         print("Final mod pack stored as \"{}\"".format(final_pack))
