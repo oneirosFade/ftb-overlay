@@ -103,6 +103,21 @@ class ftboBaseController(ArgparseController):
         print('')
         print("Merging manifest customizations...")
 
+        # Update Forge if present
+        print("Checking Forge...")
+        if 'minecraft' in custom_json_str:
+            print("Found minecraft key...")
+            if 'modLoaders' in custom_json_str['minecraft']:
+                print("Found modLoaders ley...")
+                for c_loader in custom_json_str['minecraft']['modLoaders']:
+                    print("  Testing loader {}".format(c_loader['id']))
+                    if c_loader['id'].startswith('forge-'):
+                        print("Updating Forge to {}".format(c_loader['id']))
+                        for b_loader in base_json_str['minecraft']['modLoaders']:
+                            if b_loader['id'].startswith('forge-'):
+                                print("Updated Forge from {}".format(b_loader['id']))
+                                b_loader['id'] = c_loader['id']
+
         # Iterate over all file customizations in the manifest
         for mod in custom_json_str['files']:
             mod_project_id = mod['projectID']  # Absolutely required
