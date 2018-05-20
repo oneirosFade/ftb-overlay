@@ -173,7 +173,6 @@ class ftboBaseController(ArgparseController):
                 # Write old objects if they don't collide
                 z_infolist = zFinal.infolist()
                 for base_item in zBase.infolist():
-                    print("DEBUG MATCHING: {}".format(base_item.filename))
                     collision = False
                     for check_item in z_infolist:
                         if check_item.filename == base_item.filename:
